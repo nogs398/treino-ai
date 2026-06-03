@@ -71,7 +71,8 @@ export function ChatTab() {
       })
 
       if (!response.ok) {
-        throw new Error("Erro ao enviar mensagem")
+        const errorText = await response.text()
+        throw new Error(`Erro ${response.status}: ${errorText}`)
       }
 
       const data = await response.json()

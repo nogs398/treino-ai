@@ -42,12 +42,19 @@ export async function POST(request: NextRequest) {
 
       console.log("Usando OpenAI API...")
 
+      // Configuração para ignorar certificados SSL em desenvolvimento
+      const agent = process.env.NODE_ENV === 'development' ? {
+        rejectUnauthorized: false
+      } : {}
+
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`,
         },
+        // @ts-ignore - Ignorar verificação SSL em desenvolvimento
+        agent: process.env.NODE_ENV === 'development' ? new (require('https').Agent)({ rejectUnauthorized: false }) : undefined,
         body: JSON.stringify({
           model: "gpt-3.5-turbo",
           messages: [
