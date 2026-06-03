@@ -9,6 +9,7 @@ export async function POST(request: NextRequest) {
   try {
     const { message, context, history } = await request.json()
 
+    const useGroq = process.env.USE_GROQ === 'true'
     const useOpenAI = process.env.USE_OPENAI === 'true'
 
     // Construir o prompt com contexto e histórico
@@ -28,7 +29,54 @@ export async function POST(request: NextRequest) {
 
     prompt += `Pergunta atual: ${message}\n\nResponda de forma útil e personalizada com base no perfil do usuário.`
 
-    if (useOpenAI) {
+    if (useGroq) {
+      // Usar Groq (gratuito)
+      const apiKey = process.env.GROQ_API_KEY
+      
+      if (!apiKey) {
+        console.error("GROQ_API_KEY não está configurada")
+        return NextResponse.json(
+          { error: "API key do Groq não configurada. Verifique as variáveis de ambiente." },
+          { status: 500 }
+        )
+      }
+
+      console.log("Usando Groq API...")
+
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: "llama3-70b-8192",
+          messages: [
+            {
+              role: "system",
+              content: "Você é um especialista em treinos e nutrição personalizados."
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          max_tokens: 1000,
+        }),
+      })
+
+      console.log("Status da resposta Groq:", response.status)
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("Erro na resposta do Groq:", errorText)
+        throw new Error(`Erro ao chamar Groq: ${response.status} - ${errorText}`)
+      }
+
+      const data = await response.json()
+      console.log("Resposta recebida com sucesso")
+      return NextResponse.json({ response: data.choices[0].message.content })
+    } else if (useOpenAI) {
       // Usar OpenAI
       const apiKey = process.env.OPENAI_API_KEY
       
@@ -42,19 +90,12 @@ export async function POST(request: NextRequest) {
 
       console.log("Usando OpenAI API...")
 
-      // Configuração para ignorar certificados SSL em desenvolvimento
-      const agent = process.env.NODE_ENV === 'development' ? {
-        rejectUnauthorized: false
-      } : {}
-
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${apiKey}`,
         },
-        // @ts-ignore - Ignorar verificação SSL em desenvolvimento
-        agent: process.env.NODE_ENV === 'development' ? new (require('https').Agent)({ rejectUnauthorized: false }) : undefined,
         body: JSON.stringify({
           model: "gpt-3.5-turbo",
           messages: [
@@ -91,7 +132,7 @@ export async function POST(request: NextRequest) {
       if (!apiKey) {
         console.error("OLLAMA_CLOUD_API_KEY não está configurada")
         return NextResponse.json(
-          { error: "API key do Ollama Cloud não configurada. Configure USE_OPENAI=true para usar OpenAI ou verifique OLLAMA_CLOUD_API_KEY." },
+          { error: "API key do Ollama Cloud não configurada. Configure USE_GROQ=true para usar Groq (gratuito), USE_OPENAI=true para usar OpenAI, ou verifique OLLAMA_CLOUD_API_KEY." },
           { status: 500 }
         )
       }

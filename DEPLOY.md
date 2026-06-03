@@ -29,21 +29,59 @@
    - **anon public** key (a primeira key listada)
 3. Salve essas informações, você precisará delas
 
-## Passo 2: Configurar Ollama Cloud
+## Passo 2: Configurar IA (Groq, OpenAI ou Ollama Cloud)
 
-### 2.1 Criar conta
+### Opção A: Groq (Gratuito e Recomendado)
+
+#### 2A.1 Criar conta
+1. Acesse [https://groq.com](https://groq.com)
+2. Clique em "Sign up"
+3. Crie sua conta
+4. Verifique seu email
+
+#### 2A.2 Obter API Key
+1. Faça login no Groq
+2. Vá em **API Keys** no menu lateral
+3. Clique em "Create API Key"
+4. Dê um nome para a key (ex: "treino-app")
+5. Copie a API key gerada
+6. **IMPORTANTE**: Salve a key em lugar seguro
+
+### Opção B: OpenAI (Pago)
+
+#### 2B.1 Criar conta
+1. Acesse [https://platform.openai.com](https://platform.openai.com)
+2. Clique em "Sign up"
+3. Crie sua conta
+4. Verifique seu email
+
+#### 2B.2 Obter API Key
+1. Faça login na OpenAI
+2. Vá em **Settings** > **API Keys**
+3. Clique em "Create new secret key"
+4. Copie a API key gerada
+5. **IMPORTANTE**: Salve a key em lugar seguro
+
+#### 2B.3 Adicionar créditos
+1. Vá em **Settings** > **Billing**
+2. Adicione créditos (mínimo $5)
+3. GPT-3.5-turbo é barato, $5 dura bastante
+
+### Opção C: Ollama Cloud (Alternativa)
+
+#### 2C.1 Criar conta
 1. Acesse [https://ollama.cloud](https://ollama.cloud)
 2. Clique em "Sign up"
 3. Crie sua conta
 4. Verifique seu email
 
-### 2.2 Obter API Key
+#### 2C.2 Obter API Key
 1. Faça login no Ollama Cloud
 2. Vá em **Settings** > **API Keys**
 3. Clique em "Create new API key"
 4. Dê um nome para a key (ex: "treino-app")
 5. Copie a API key gerada
-6. **IMPORTANTE**: Salve a key em lugar seguro, você não poderá vê-la novamente
+6. **IMPORTANTE**: Salve a key em lugar seguro
 
 ## Passo 3: Preparar para Deploy
 
@@ -96,6 +134,26 @@ git push -u origin main
 
 ### 4.4 Configurar variáveis de ambiente
 Na seção "Environment Variables", adicione:
+
+**Para Groq (gratuito e recomendado):**
+
+| Name | Value |
+|------|-------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Sua URL do Supabase (ex: `https://xxxxxxxx.supabase.co`) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sua anon key do Supabase |
+| `USE_GROQ` | `true` |
+| `GROQ_API_KEY` | Sua API key do Groq |
+
+**Para OpenAI (pago):**
+
+| Name | Value |
+|------|-------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Sua URL do Supabase (ex: `https://xxxxxxxx.supabase.co`) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sua anon key do Supabase |
+| `USE_OPENAI` | `true` |
+| `OPENAI_API_KEY` | Sua API key da OpenAI |
+
+**Para Ollama Cloud (alternativa):**
 
 | Name | Value |
 |------|-------|

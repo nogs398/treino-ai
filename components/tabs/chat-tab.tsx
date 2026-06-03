@@ -90,7 +90,7 @@ export function ChatTab() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: `Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}. Verifique se o Ollama Cloud está configurado corretamente e se você tem créditos disponíveis.`,
+        content: `Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}. Verifique se a IA está configurada corretamente (Groq, OpenAI ou Ollama Cloud).`,
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMessage])
