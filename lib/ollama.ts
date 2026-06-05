@@ -100,12 +100,36 @@ export async function generateWorkout(prompt: string): Promise<string> {
   const useGroq = process.env.USE_GROQ === 'true';
   const useOpenAI = process.env.USE_OPENAI === 'true';
   
+  const structuredPrompt = `Você é um especialista em treinos. ${prompt}
+  
+IMPORTANTE: Retorne APENAS um JSON válido com a seguinte estrutura, sem texto adicional:
+{
+  "exercises": [
+    {
+      "name": "nome do exercício",
+      "sets": número de séries,
+      "reps": "repetições ou distância",
+      "type": "musculacao" ou "corrida"
+    }
+  ],
+  "description": "descrição breve do treino"
+}
+
+Exemplo:
+{
+  "exercises": [
+    {"name": "Supino Reto", "sets": 3, "reps": "12", "type": "musculacao"},
+    {"name": "Agachamento", "sets": 3, "reps": "15", "type": "musculacao"}
+  ],
+  "description": "Treino de peito e pernas para iniciantes"
+}`;
+  
   if (useGroq) {
-    return callGroq(`Você é um especialista em treinos. ${prompt}`);
+    return callGroq(structuredPrompt);
   }
   
   if (useOpenAI) {
-    return callOpenAI(`Você é um especialista em treinos. ${prompt}`);
+    return callOpenAI(structuredPrompt);
   }
 
   const apiKey = process.env.OLLAMA_CLOUD_API_KEY;

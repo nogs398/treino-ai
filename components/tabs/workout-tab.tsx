@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { generateWorkout } from "@/lib/ollama"
 import { Plus, Trash2, Dumbbell, Activity } from "lucide-react"
 
 interface Exercise {
@@ -52,8 +51,41 @@ export function WorkoutTab() {
 
     setIsLoading(true)
     try {
-      const response = await generateWorkout(aiPrompt)
-      setAiResponse(response)
+      const response = await fetch("/api/workout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt: aiPrompt }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao gerar treino")
+      }
+
+      const data = await response.json()
+      
+      // Tentar parsear como JSON
+      try {
+        const parsed = JSON.parse(data.response)
+        if (parsed.exercises && Array.isArray(parsed.exercises)) {
+          // Adicionar exercícios à lista
+          const newExercises = parsed.exercises.map((ex: any) => ({
+            id: Date.now().toString() + Math.random(),
+            name: ex.name,
+            sets: ex.sets || 3,
+            reps: ex.reps || "12",
+            type: ex.type || "musculacao"
+          }))
+          setExercises([...exercises, ...newExercises])
+          setAiResponse(parsed.description || "Treino gerado com sucesso!")
+        } else {
+          setAiResponse(data.response)
+        }
+      } catch {
+        // Se não for JSON, mostrar como texto
+        setAiResponse(data.response)
+      }
     } catch (error) {
       console.error("Erro ao gerar treino:", error)
       setAiResponse("Erro ao gerar treino. Tente novamente.")
@@ -90,7 +122,7 @@ export function WorkoutTab() {
             {isLoading ? "Gerando..." : "Gerar Treino"}
           </Button>
           {aiResponse && (
-            <div className="mt-4 p-4 bg-gray-800 rounded-lg">
+            <div className="mt-4 p-4 bg-gray-800 rounded-lg max-h-96 overflow-y-auto">
               <h4 className="font-semibold mb-2">Treino Sugerido:</h4>
               <pre className="whitespace-pre-wrap text-sm text-gray-300">{aiResponse}</pre>
             </div>

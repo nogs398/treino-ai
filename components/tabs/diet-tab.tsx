@@ -5,7 +5,6 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { generateDiet, calculateCalories } from "@/lib/ollama"
 import { Plus, Trash2, Utensils, Calculator } from "lucide-react"
 
 interface FoodItem {
@@ -31,11 +30,23 @@ export function DietTab() {
 
     setIsCalculating(true)
     try {
-      const calories = await calculateCalories(newFood)
+      const response = await fetch("/api/calories", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ foodItem: newFood }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao calcular calorias")
+      }
+
+      const data = await response.json()
       const foodItem: FoodItem = {
         id: Date.now().toString(),
         name: newFood,
-        calories: calories
+        calories: data.calories
       }
       setFoodItems([...foodItems, foodItem])
       setNewFood("")
@@ -55,8 +66,20 @@ export function DietTab() {
 
     setIsLoading(true)
     try {
-      const response = await generateDiet(aiPrompt)
-      setAiResponse(response)
+      const response = await fetch("/api/diet", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt: aiPrompt }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao gerar dieta")
+      }
+
+      const data = await response.json()
+      setAiResponse(data.response)
     } catch (error) {
       console.error("Erro ao gerar dieta:", error)
       setAiResponse("Erro ao gerar dieta. Tente novamente.")
