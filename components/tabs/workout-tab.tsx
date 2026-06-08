@@ -5,7 +5,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Trash2, Dumbbell, Activity } from "lucide-react"
+import { Plus, Trash2, Dumbbell, Activity, Calendar } from "lucide-react"
+import { createClient } from "@supabase/supabase-js"
+import { useAuth } from "@/lib/auth-context"
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 interface Exercise {
   id: string
@@ -22,6 +29,7 @@ interface WorkoutDay {
 }
 
 export function WorkoutTab() {
+  const { user } = useAuth()
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [workoutDays, setWorkoutDays] = useState<WorkoutDay[]>([])
   const [newExercise, setNewExercise] = useState({
@@ -51,6 +59,61 @@ export function WorkoutTab() {
 
   const removeExercise = (id: string) => {
     setExercises(exercises.filter(ex => ex.id !== id))
+  }
+
+  const saveWorkoutToCalendar = async () => {
+    if (!user) {
+      alert("Você precisa estar logado para salvar treinos")
+      return
+    }
+
+    try {
+      // Mapear dias da semana para datas (começando de hoje)
+      const dayMap: { [key: string]: number } = {
+        "Segunda": 1,
+        "Terça": 2,
+        "Quarta": 3,
+        "Quinta": 4,
+        "Sexta": 5,
+        "Sábado": 6,
+        "Domingo": 0
+      }
+
+      const today = new Date()
+      const currentDay = today.getDay()
+
+      for (const dayData of workoutDays) {
+        // Calcular a próxima ocorrência do dia da semana
+        const targetDay = dayMap[dayData.day] || 1
+        let daysUntilTarget = targetDay - currentDay
+        if (daysUntilTarget <= 0) {
+          daysUntilTarget += 7
+        }
+
+        const workoutDate = new Date(today)
+        workoutDate.setDate(today.getDate() + daysUntilTarget)
+
+        // Criar evento no calendário
+        const { error } = await supabase
+          .from("calendar_events")
+          .insert({
+            user_id: user.id,
+            date: workoutDate.toISOString().split("T")[0],
+            type: "workout",
+            title: `${dayData.day} - ${dayData.focus}`,
+            description: dayData.exercises
+              .map((ex) => `${ex.name}: ${ex.sets} séries × ${ex.reps}`)
+              .join("\n")
+          })
+
+        if (error) throw error
+      }
+
+      alert("Treino salvo no calendário com sucesso!")
+    } catch (error) {
+      console.error("Erro ao salvar treino:", error)
+      alert("Erro ao salvar treino. Tente novamente.")
+    }
   }
 
   const handleGenerateWorkout = async () => {
@@ -245,7 +308,13 @@ export function WorkoutTab() {
       {/* Treinos por Dia */}
       {workoutDays.length > 0 && (
         <div className="space-y-4">
-          <h3 className="text-xl font-semibold">Divisão de Treino</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-semibold">Divisão de Treino</h3>
+            <Button onClick={() => saveWorkoutToCalendar()} className="bg-green-600 hover:bg-green-700">
+              <Calendar className="h-4 w-4 mr-2" />
+              Salvar no Calendário
+            </Button>
+          </div>
           {workoutDays.map((day, dayIndex) => (
             <Card key={dayIndex}>
               <CardHeader>
@@ -258,9 +327,16 @@ export function WorkoutTab() {
                 <div className="space-y-3">
                   {day.exercises.map((exercise) => (
                     <div key={exercise.id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
-                      <div>
-                        <h4 className="font-semibold">{exercise.name}</h4>
-                        <p className="text-sm text-gray-400">{exercise.sets} séries × {exercise.reps}</p>
+                      <div className="flex items-center gap-3">
+                        {exercise.type === "corrida" ? (
+                          <Activity className="h-5 w-5 text-orange-500" />
+                        ) : (
+                          <Dumbbell className="h-5 w-5 text-blue-500" />
+                        )}
+                        <div>
+                          <h4 className="font-semibold">{exercise.name}</h4>
+                          <p className="text-sm text-gray-400">{exercise.sets} séries × {exercise.reps}</p>
+                        </div>
                       </div>
                       <Button
                         variant="ghost"

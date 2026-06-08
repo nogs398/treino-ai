@@ -4,6 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Tabela de exercícios
 CREATE TABLE exercises (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   sets INTEGER NOT NULL,
   reps TEXT NOT NULL,
@@ -15,6 +16,7 @@ CREATE TABLE exercises (
 -- Tabela de treinos
 CREATE TABLE workouts (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   date DATE NOT NULL,
   description TEXT,
@@ -34,6 +36,7 @@ CREATE TABLE workout_exercises (
 -- Tabela de alimentos
 CREATE TABLE food_items (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   calories INTEGER NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
@@ -42,11 +45,13 @@ CREATE TABLE food_items (
 -- Tabela de consumo diário
 CREATE TABLE daily_consumption (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  date DATE NOT NULL UNIQUE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  date DATE NOT NULL,
   total_calories INTEGER DEFAULT 0,
   calorie_goal INTEGER DEFAULT 2000,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  UNIQUE(user_id, date)
 );
 
 -- Tabela de relação consumo-alimento
@@ -60,6 +65,7 @@ CREATE TABLE consumption_food_items (
 -- Tabela de dietas geradas por IA
 CREATE TABLE diets (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   date DATE NOT NULL,
   content TEXT NOT NULL,
   prompt TEXT NOT NULL,
@@ -69,6 +75,7 @@ CREATE TABLE diets (
 -- Tabela de eventos do calendário
 CREATE TABLE calendar_events (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   date DATE NOT NULL,
   type TEXT NOT NULL CHECK (type IN ('workout', 'diet')),
   title TEXT NOT NULL,
@@ -80,6 +87,7 @@ CREATE TABLE calendar_events (
 -- Tabela de perfil do usuário
 CREATE TABLE user_profile (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
   age INTEGER,
   weight DECIMAL(5,2),
   height DECIMAL(5,2),
@@ -95,6 +103,7 @@ CREATE TABLE user_profile (
 -- Tabela de conversas com IA
 CREATE TABLE ai_conversations (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   user_message TEXT NOT NULL,
   ai_response TEXT NOT NULL,
   context TEXT,
@@ -142,27 +151,99 @@ ALTER TABLE calendar_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_profile ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_conversations ENABLE ROW LEVEL SECURITY;
 
--- Políticas RLS (permitir tudo por enquanto - ajustar conforme necessário)
-CREATE POLICY "Enable all access for exercises" ON exercises
-  FOR ALL USING (true) WITH CHECK (true);
+-- Políticas RLS (baseadas em user_id)
+CREATE POLICY "Users can view their own exercises" ON exercises
+  FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "Enable all access for workouts" ON workouts
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Users can insert their own exercises" ON exercises
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Enable all access for food_items" ON food_items
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Users can update their own exercises" ON exercises
+  FOR UPDATE USING (auth.uid() = user_id);
 
-CREATE POLICY "Enable all access for daily_consumption" ON daily_consumption
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Users can delete their own exercises" ON exercises
+  FOR DELETE USING (auth.uid() = user_id);
 
-CREATE POLICY "Enable all access for diets" ON diets
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Users can view their own workouts" ON workouts
+  FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "Enable all access for calendar_events" ON calendar_events
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Users can insert their own workouts" ON workouts
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Enable all access for user_profile" ON user_profile
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Users can update their own workouts" ON workouts
+  FOR UPDATE USING (auth.uid() = user_id);
 
-CREATE POLICY "Enable all access for ai_conversations" ON ai_conversations
-  FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Users can delete their own workouts" ON workouts
+  FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view their own food_items" ON food_items
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own food_items" ON food_items
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own food_items" ON food_items
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own food_items" ON food_items
+  FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view their own daily_consumption" ON daily_consumption
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own daily_consumption" ON daily_consumption
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own daily_consumption" ON daily_consumption
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own daily_consumption" ON daily_consumption
+  FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view their own diets" ON diets
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own diets" ON diets
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own diets" ON diets
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own diets" ON diets
+  FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view their own calendar_events" ON calendar_events
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own calendar_events" ON calendar_events
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own calendar_events" ON calendar_events
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own calendar_events" ON calendar_events
+  FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view their own user_profile" ON user_profile
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own user_profile" ON user_profile
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own user_profile" ON user_profile
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own user_profile" ON user_profile
+  FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view their own ai_conversations" ON ai_conversations
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own ai_conversations" ON ai_conversations
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own ai_conversations" ON ai_conversations
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own ai_conversations" ON ai_conversations
+  FOR DELETE USING (auth.uid() = user_id);
