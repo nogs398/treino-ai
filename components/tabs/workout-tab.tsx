@@ -15,8 +15,15 @@ interface Exercise {
   type: "musculacao" | "corrida"
 }
 
+interface WorkoutDay {
+  day: string
+  focus: string
+  exercises: Exercise[]
+}
+
 export function WorkoutTab() {
   const [exercises, setExercises] = useState<Exercise[]>([])
+  const [workoutDays, setWorkoutDays] = useState<WorkoutDay[]>([])
   const [newExercise, setNewExercise] = useState({
     name: "",
     sets: 3,
@@ -65,11 +72,58 @@ export function WorkoutTab() {
 
       const data = await response.json()
       
+      console.log("Resposta da IA:", data.response)
+      
+      // Tentar extrair JSON de markdown code blocks
+      let jsonStr = data.response
+      
+      // Tentar extrair JSON de code blocks
+      const codeBlockMatch = jsonStr.match(/```json\s*([\s\S]*?)\s*```/)
+      if (codeBlockMatch) {
+        jsonStr = codeBlockMatch[1].trim()
+      }
+      
+      // Remover qualquer texto antes do primeiro {
+      const firstBrace = jsonStr.indexOf('{')
+      if (firstBrace > 0) {
+        jsonStr = jsonStr.substring(firstBrace)
+      }
+      
       // Tentar parsear como JSON
       try {
-        const parsed = JSON.parse(data.response)
-        if (parsed.exercises && Array.isArray(parsed.exercises)) {
-          // Adicionar exercícios à lista
+        const parsed = JSON.parse(jsonStr)
+        console.log("JSON parseado:", parsed)
+        
+        if (parsed.days && Array.isArray(parsed.days)) {
+          // Nova estrutura com dias
+          let workoutDays: WorkoutDay[] = []
+          let workoutPlan = ""
+          
+          parsed.days.forEach((dayData: any) => {
+            const dayExercises: Exercise[] = dayData.exercises.map((ex: any) => ({
+              id: Date.now().toString() + Math.random(),
+              name: ex.name,
+              sets: ex.sets || 3,
+              reps: ex.reps || "12",
+              type: ex.type || "musculacao"
+            }))
+            
+            workoutDays.push({
+              day: dayData.day,
+              focus: dayData.focus,
+              exercises: dayExercises
+            })
+            
+            workoutPlan += `\n\n**${dayData.day} - ${dayData.focus}**\n`
+            dayExercises.forEach((ex) => {
+              workoutPlan += `- ${ex.name}: ${ex.sets} séries × ${ex.reps}\n`
+            })
+          })
+          
+          setWorkoutDays(workoutDays)
+          setAiResponse(workoutPlan)
+        } else if (parsed.exercises && Array.isArray(parsed.exercises)) {
+          // Estrutura antiga (compatibilidade)
           const newExercises = parsed.exercises.map((ex: any) => ({
             id: Date.now().toString() + Math.random(),
             name: ex.name,
@@ -80,9 +134,11 @@ export function WorkoutTab() {
           setExercises([...exercises, ...newExercises])
           setAiResponse(parsed.description || "Treino gerado com sucesso!")
         } else {
+          console.log("Não encontrou estrutura válida")
           setAiResponse(data.response)
         }
-      } catch {
+      } catch (e) {
+        console.log("Erro ao parsear JSON:", e)
         // Se não for JSON, mostrar como texto
         setAiResponse(data.response)
       }
@@ -186,12 +242,52 @@ export function WorkoutTab() {
         </CardContent>
       </Card>
 
-      {/* Lista de Exercícios de Musculação */}
+      {/* Treinos por Dia */}
+      {workoutDays.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-xl font-semibold">Divisão de Treino</h3>
+          {workoutDays.map((day, dayIndex) => (
+            <Card key={dayIndex}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Dumbbell className="h-5 w-5 text-blue-500" />
+                  {day.day} - {day.focus}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {day.exercises.map((exercise) => (
+                    <div key={exercise.id} className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                      <div>
+                        <h4 className="font-semibold">{exercise.name}</h4>
+                        <p className="text-sm text-gray-400">{exercise.sets} séries × {exercise.reps}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const updatedDays = [...workoutDays]
+                          updatedDays[dayIndex].exercises = updatedDays[dayIndex].exercises.filter(ex => ex.id !== exercise.id)
+                          setWorkoutDays(updatedDays)
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Lista de Exercícios de Musculação (Manual) */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Dumbbell className="h-5 w-5 text-blue-500" />
-            Musculação
+            Musculação (Manual)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -219,12 +315,12 @@ export function WorkoutTab() {
         </CardContent>
       </Card>
 
-      {/* Lista de Exercícios de Corrida */}
+      {/* Lista de Exercícios de Corrida (Manual) */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5 text-orange-500" />
-            Corrida
+            Corrida (Manual)
           </CardTitle>
         </CardHeader>
         <CardContent>

@@ -102,27 +102,45 @@ export async function generateWorkout(prompt: string): Promise<string> {
   
   const structuredPrompt = `Você é um especialista em treinos. ${prompt}
   
-IMPORTANTE: Retorne APENAS um JSON válido com a seguinte estrutura, sem texto adicional:
-{
-  "exercises": [
-    {
-      "name": "nome do exercício",
-      "sets": número de séries,
-      "reps": "repetições ou distância",
-      "type": "musculacao" ou "corrida"
-    }
-  ],
-  "description": "descrição breve do treino"
-}
+CRÍTICO: Retorne APENAS UM objeto JSON válido com a divisão de treino por dias da semana. NÃO retorne múltiplos objetos JSON. Use markdown code blocks:
 
-Exemplo:
+\`\`\`json
 {
-  "exercises": [
-    {"name": "Supino Reto", "sets": 3, "reps": "12", "type": "musculacao"},
-    {"name": "Agachamento", "sets": 3, "reps": "15", "type": "musculacao"}
-  ],
-  "description": "Treino de peito e pernas para iniciantes"
-}`;
+  "days": [
+    {
+      "day": "Segunda",
+      "focus": "Peito e Ombro",
+      "exercises": [
+        {"name": "nome do exercício", "sets": número de séries, "reps": "repetições", "type": "musculacao" ou "corrida"}
+      ]
+    }
+  ]
+}
+\`\`\`
+
+Exemplo correto (UM objeto JSON com todos os dias):
+\`\`\`json
+{
+  "days": [
+    {
+      "day": "Segunda",
+      "focus": "Peito e Ombro",
+      "exercises": [
+        {"name": "Supino Reto", "sets": 3, "reps": "12", "type": "musculacao"},
+        {"name": "Desenvolvimento", "sets": 3, "reps": "12", "type": "musculacao"}
+      ]
+    },
+    {
+      "day": "Terça",
+      "focus": "Costa e Bíceps",
+      "exercises": [
+        {"name": "Barra Fixa", "sets": 3, "reps": "10", "type": "musculacao"},
+        {"name": "Rosca Direta", "sets": 3, "reps": "12", "type": "musculacao"}
+      ]
+    }
+  ]
+}
+\`\`\``;
   
   if (useGroq) {
     return callGroq(structuredPrompt);
